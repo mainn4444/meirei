@@ -1,99 +1,107 @@
-# meirei
 <!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CPU命令シミュレーター</title>
+    <title>CPU命令シミュレーター (昼白色テーマ)</title>
     <style>
+        /* --- 全体のスタイルと昼白色テーマ --- */
         body {
-            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             display: flex;
             justify-content: center;
-            align-items: flex-start;
             padding: 20px;
-            background-color: #f0f2f5;
-            gap: 20px;
+            background-color: #f8f9fa; /* 明るいグレー (昼白色の背景) */
+            color: #212529; /* ダークグレーのテキスト */
+            gap: 25px;
             flex-wrap: wrap;
         }
         .container {
-            background-color: white;
-            padding: 20px;
+            background-color: #ffffff; /* コンテンツエリアは白 */
+            padding: 25px;
             border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            min-width: 300px;
+            border: 1px solid #dee2e6; /* やさしい境界線 */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            min-width: 320px;
         }
         h2 {
             margin-top: 0;
-            border-bottom: 2px solid #007bff;
+            border-bottom: 2px solid #0d6efd;
             padding-bottom: 10px;
-            color: #333;
+            color: #343a40;
+            font-size: 1.5em;
         }
         h3 {
-            margin-top: 15px;
-            margin-bottom: 5px;
-            font-size: 1em;
-            color: #555;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            color: #495057;
         }
+
+        /* --- 各コンポーネントのスタイル --- */
         #program-code, #memory-view, #output {
-            border: 1px solid #ccc;
+            border: 1px solid #ced4da;
             border-radius: 4px;
             padding: 10px;
-            height: 200px;
+            height: 220px;
             overflow-y: auto;
-            background-color: #f9f9f9;
+            background-color: #f8f9fa;
+            font-family: "SF Mono", "Consolas", monospace;
+            font-size: 1.1em;
         }
-        #program-code div.highlight {
-            background-color: #fff3cd;
+        #program-code div.highlight-pc {
+            background-color: #cfe2ff; /* 実行行のハイライト (ソフトな青) */
             font-weight: bold;
         }
         #memory-view span, #cpu-registers span {
             display: inline-block;
-            width: 80px;
-            border: 1px solid #ddd;
-            padding: 5px;
-            margin: 2px;
+            width: 90px;
+            border: 1px solid #ced4da;
+            padding: 8px 5px;
+            margin: 3px;
             text-align: center;
             border-radius: 4px;
+            background-color: #fff;
+            transition: all 0.3s ease;
         }
-        #memory-view span.highlight, #cpu-registers span.highlight {
-            background-color: #d1ecf1;
-            transition: background-color 0.3s;
-        }
-        #controls, #io-area {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+        /* メモリ変更時のハイライト */
+        #memory-view span.highlight-mem {
+            background-color: #fd7e14; /* オレンジ色で変更を強調 */
+            color: white;
+            transform: scale(1.05);
         }
         button {
-            padding: 10px 15px;
+            padding: 12px 18px;
             border: none;
             border-radius: 5px;
-            background-color: #007bff;
+            background-color: #0d6efd;
             color: white;
             font-size: 16px;
             cursor: pointer;
-            transition: background-color 0.3s;
+            transition: background-color 0.2s;
+            width: 100%;
         }
         button:hover {
-            background-color: #0056b3;
+            background-color: #0b5ed7;
         }
         button:disabled {
-            background-color: #ccc;
+            background-color: #adb5bd;
             cursor: not-allowed;
         }
         input[type="number"] {
-            padding: 8px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-            width: calc(100% - 18px);
-        }
-        .explanation {
-            margin-top: 10px;
             padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ced4da;
+            width: calc(100% - 22px); /* paddingを考慮 */
+            font-size: 1em;
+        }
+        .info-box {
+            margin-top: 15px;
+            padding: 12px;
             background-color: #e9ecef;
-            border-left: 5px solid #007bff;
+            border-left: 5px solid #6c757d;
             font-size: 0.9em;
+            color: #495057;
         }
     </style>
 </head>
@@ -102,79 +110,83 @@
     <div class="container">
         <h2>📜 プログラムコード</h2>
         <div id="program-code"></div>
-        <div class="explanation">
-            コンピュータに実行させたい命令の一覧です。上から順番に実行されます。
+        <div class="info-box">
+            <p><strong>PC (プログラムカウンタ)</strong>が指す行の命令が次に実行されます。</p>
         </div>
     </div>
 
     <div class="container">
-        <h2>🧠 CPUとメモリ</h2>
-        <h3>CPU レジスタ (一時的な作業場所)</h3>
-        <div id="cpu-registers">
-            <span>PC: 0</span>
-        </div>
-        <h3 style="margin-top: 20px;">📝 メインメモリ (データを保存する場所)</h3>
+        <h2>🧠 CPU & メモリ</h2>
+        <h3>CPU レジスタ (CPU内の小さな記憶装置)</h3>
+        <div id="cpu-registers"></div>
+        <h3>📝 メインメモリ (データを保存する机)</h3>
         <div id="memory-view"></div>
-        <div class="explanation">
-           CPUが計算や処理に使うデータを一時的に記憶する場所です。
-        </div>
     </div>
 
     <div class="container">
-        <h2>↔️ 入出力と操作</h2>
-        <div id="io-area">
-            <h3>📥 入力 (INPUT)</h3>
-            <input type="number" id="input-value" placeholder="数字を入力してREAD命令を実行">
-        </div>
-        <div id="output-area" style="margin-top:20px;">
-            <h3>📤 出力 (OUTPUT)</h3>
-            <div id="output"></div>
-        </div>
-        <div id="controls" style="margin-top: 20px;">
-            <button id="reset-btn">リセット</button>
+        <h2>🎮 操作パネル</h2>
+        <h3>📥 入力 (READ命令用)</h3>
+        <input type="number" id="input-value" placeholder="数字を入力してください">
+        
+        <h3>📤 出力 (WRITE命令の結果)</h3>
+        <div id="output"></div>
+        
+        <div style="margin-top: 25px; display: grid; gap: 10px;">
             <button id="next-btn">次の命令を実行 →</button>
+            <button id="reset-btn" style="background-color: #6c757d;">リセット</button>
+        </div>
+        <div class="info-box">
+            <h4>使い方</h4>
+            <ol>
+                <li><strong>READ命令</strong>の時は、入力欄に数字を入れてから「次へ」を押します。</li>
+                <li>命令が1行ずつ実行され、メモリや出力が変化する様子を観察します。</li>
+                <li>「リセット」で最初からやり直せます。</li>
+            </ol>
         </div>
     </div>
 
 <script>
-    // --- シミュレーターの初期設定 ---
+    // --- プログラム ---
+    // 足し算の結果を別の場所に保存するように変更
     const program = [
-        "READ 0",   // 入力された値をメモリの0番地に読み込む
-        "READ 1",   // 入力された値をメモリの1番地に読み込む
-        "ADD 0 1",  // メモリの0番地と1番地の値を足し算する
-        "WRITE 0",  // メモリの0番地の値を出力する
-        "STOP"      // プログラムを停止する
+        "READ 0",   // 入力値をメモリ[0]へ
+        "READ 1",   // 入力値をメモリ[1]へ
+        "ADD 0 1 2",// メモリ[0]と[1]を足して、結果をメモリ[2]へ
+        "WRITE 2",  // メモリ[2]の値を出力
+        "STOP"      // 停止
     ];
 
-    let memory = new Array(10).fill(0); // 10個のメモリ空間を0で初期化
-    let pc = 0; // プログラムカウンタ: 次に実行する命令の場所
+    // --- グローバル変数 (シミュレーターの状態) ---
+    let memory;
+    let pc; // プログラムカウンタ
 
-    // --- HTML要素の取得 ---
+    // --- HTML要素のキャッシュ ---
     const programCodeDiv = document.getElementById('program-code');
     const memoryViewDiv = document.getElementById('memory-view');
     const cpuRegistersDiv = document.getElementById('cpu-registers');
     const outputDiv = document.getElementById('output');
-    const inputValue = document.getElementById('input-value');
+    const inputValueEl = document.getElementById('input-value');
     const nextBtn = document.getElementById('next-btn');
     const resetBtn = document.getElementById('reset-btn');
 
-    // --- 画面表示を更新する関数 ---
+    // --- 表示を更新するメイン関数 ---
     function updateDisplay() {
-        // プログラムコードの表示
+        // 1. プログラムコードの表示を更新
         programCodeDiv.innerHTML = '';
         program.forEach((line, index) => {
             const div = document.createElement('div');
-            div.textContent = `${index}: ${line}`;
+            div.textContent = `${index.toString().padStart(2, '0')}: ${line}`;
             if (index === pc) {
-                div.classList.add('highlight'); // 実行中の行をハイライト
+                div.classList.add('highlight-pc');
+                div.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
             programCodeDiv.appendChild(div);
         });
 
-        // CPUレジスタの表示
+        // 2. CPUレジスタの表示を更新
         cpuRegistersDiv.innerHTML = `<span>PC: ${pc}</span>`;
 
-        // メモリの表示
+        // 3. メモリの表示を更新
         memoryViewDiv.innerHTML = '';
         memory.forEach((value, index) => {
             const span = document.createElement('span');
@@ -184,82 +196,89 @@
         });
     }
 
-    // --- リセット処理 ---
-    function reset() {
-        memory.fill(0);
-        pc = 0;
+    // --- 初期化・リセット関数 ---
+    function initialize() {
+        memory = new Array(10).fill(0); // 10個のメモリ空間
+        pc = 0; // プログラムカウンタを0に
         outputDiv.innerHTML = '';
-        inputValue.value = '';
+        inputValueEl.value = '';
         nextBtn.disabled = false;
+        document.title = "CPU命令シミュレーター";
         updateDisplay();
     }
 
-    // --- 1ステップ実行処理 ---
-    function step() {
+    // --- 「次の命令を実行」ボタンの処理 ---
+    function executeStep() {
         if (pc >= program.length) return;
 
-        // 前回ハイライトを消す
-        document.querySelectorAll('.highlight').forEach(el => el.classList.remove('highlight'));
-
-        const instruction = program[pc].split(' ');
-        const command = instruction[0];
+        const instructionLine = program[pc];
+        const parts = instructionLine.split(' ');
+        const command = parts[0];
+        
+        let shouldIncrementPC = true;
 
         switch (command) {
             case 'READ': {
-                const memAddr = parseInt(instruction[1]);
-                const val = parseInt(inputValue.value);
-                if (isNaN(val)) {
-                    alert("入力エリアに有効な数字を入力してください。");
-                    return;
+                const memAddr = parseInt(parts[1]);
+                const numValue = parseInt(inputValueEl.value);
+                if (isNaN(numValue)) {
+                    alert("入力エリアに半角数字を入れてから実行してください。");
+                    return; // PCを進めずに処理を中断
                 }
-                memory[memAddr] = val;
-                inputValue.value = ''; // 入力欄をクリア
-                highlightElement(`mem-${memAddr}`);
+                memory[memAddr] = numValue;
+                inputValueEl.value = ''; // 入力欄をクリア
+                highlightMemoryCell(memAddr);
                 break;
             }
             case 'WRITE': {
-                const memAddr = parseInt(instruction[1]);
-                outputDiv.innerHTML += `> ${memory[memAddr]}\n`;
-                highlightElement(`mem-${memAddr}`);
+                const memAddr = parseInt(parts[1]);
+                outputDiv.innerHTML += `> ${memory[memAddr]}<br>`;
+                outputDiv.scrollTop = outputDiv.scrollHeight;
+                highlightMemoryCell(memAddr, false);
                 break;
             }
             case 'ADD': {
-                const addr1 = parseInt(instruction[1]);
-                const addr2 = parseInt(instruction[2]);
-                memory[addr1] = memory[addr1] + memory[addr2];
-                highlightElement(`mem-${addr1}`);
-                highlightElement(`mem-${addr2}`);
+                const addr1 = parseInt(parts[1]);
+                const addr2 = parseInt(parts[2]);
+                const destAddr = parseInt(parts[3]);
+                memory[destAddr] = memory[addr1] + memory[addr2];
+                highlightMemoryCell(addr1, false);
+                highlightMemoryCell(addr2, false);
+                highlightMemoryCell(destAddr, true);
                 break;
             }
             case 'STOP':
                 nextBtn.disabled = true;
-                alert("プログラムが終了しました。");
+                document.title = "プログラム終了";
+                shouldIncrementPC = false;
                 break;
+            default:
+                console.error(`不明な命令です: ${command}`);
         }
 
-        if (command !== 'STOP') {
+        if (shouldIncrementPC) {
             pc++;
         }
         updateDisplay();
     }
     
-    // 特定の要素を一時的にハイライトする関数
-    function highlightElement(id) {
-        const el = document.getElementById(id);
+    // メモリセルを一時的にハイライトする関数
+    function highlightMemoryCell(index, isDestination = true) {
+        const el = document.getElementById(`mem-${index}`);
         if (el) {
-            el.classList.add('highlight');
+            el.classList.add('highlight-mem');
             setTimeout(() => {
-                el.classList.remove('highlight');
-            }, 1000);
+                el.classList.remove('highlight-mem');
+            }, 1200); // 1.2秒後にハイライトを消す
         }
     }
 
-    // --- イベントリスナーの設定 ---
-    nextBtn.addEventListener('click', step);
-    resetBtn.addEventListener('click', reset);
+    // --- イベントリスナーを接続 ---
+    nextBtn.addEventListener('click', executeStep);
+    resetBtn.addEventListener('click', initialize);
 
-    // --- 初期表示 ---
-    reset();
+    // --- 最初の読み込み時に初期化 ---
+    initialize();
 </script>
 
 </body>
